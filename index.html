@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#061326" />
+  <title>Eleições 2026 — Apuração em tempo real</title>
+  <meta name="description" content="Painel independente de apuração eleitoral com dados oficiais do TSE, mapa, histórico de 2022 e projeções estatísticas até 60% da apuração." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark" aria-hidden="true"><span>BR</span></div>
+    <div class="brand-copy">
+      <div class="eyebrow">ELEIÇÕES GERAIS • <span id="headerYear">2026</span></div>
+      <h1>Eleições <span id="titleYear">2026</span> <em>— Apuração em tempo real</em></h1>
+      <p>Dados oficiais do TSE <span>•</span> Atualização automática</p>
+    </div>
+    <div class="header-spacer"></div>
+    <div class="live-status">
+      <span id="liveDot" class="live-dot"></span>
+      <div><strong id="sourceStatus">Preparando painel</strong><small id="lastUpdate">—</small></div>
+    </div>
+    <div class="source-brand" title="Painel independente. Dados eleitorais fornecidos pelo TSE.">
+      <span class="source-icon">✓</span>
+      <div><strong>FONTE TSE</strong><small>Painel independente</small></div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <nav class="rail" aria-label="Navegação do painel">
+      <button class="rail-item active" type="button" data-target="overviewPanel"><span>⌂</span><b>Visão geral</b></button>
+      <button class="rail-item" type="button" data-target="mapPanel"><span>◇</span><b>Mapa do Brasil</b></button>
+      <button class="rail-item" type="button" data-target="resultsPanel"><span>▥</span><b>Resultados</b></button>
+      <button class="rail-item" type="button" data-target="projectionPanel"><span>↗</span><b>Projeções</b></button>
+      <button class="rail-item" id="historyShortcut" type="button"><span>◷</span><b>Eleições 2022</b></button>
+      <button class="rail-item" id="methodologyBtn" type="button"><span>i</span><b>Metodologia</b></button>
+      <div class="rail-footer"><strong>ELEIÇÕES</strong><span id="railYear">2026</span><small>Dados oficiais<br>TSE</small></div>
+    </nav>
+
+    <section class="dashboard-column" id="overviewPanel">
+      <section class="card filters-card">
+        <div class="card-title"><span class="title-icon">≡</span><h2>Filtros</h2><span id="modePill" class="pill">AO VIVO</span></div>
+        <div class="filter-grid">
+          <label>Ano
+            <select id="year">
+              <option value="2026" selected>2026 — ao vivo</option>
+              <option value="2022">2022 — histórico</option>
+            </select>
+          </label>
+          <label id="environmentLabel">Ambiente
+            <select id="environment">
+              <option value="official" selected>Oficial</option>
+              <option value="simulated">Simulado</option>
+            </select>
+          </label>
+          <label>Turno
+            <select id="turn">
+              <option value="1" selected>1º turno</option>
+              <option value="2">2º turno</option>
+            </select>
+          </label>
+          <label>Cargo
+            <select id="office">
+              <option value="1">Presidente</option>
+              <option value="3">Governador</option>
+              <option value="5">Senador</option>
+              <option value="6">Deputado Federal</option>
+              <option value="7">Deputado Estadual / Distrital</option>
+            </select>
+          </label>
+          <label>Estado
+            <select id="state"><option value="">Brasil — visão por estado</option></select>
+          </label>
+          <label>Camada do mapa
+            <select id="layerMode">
+              <option value="leader">Candidato mais votado</option>
+              <option value="progress">Percentual totalizado</option>
+            </select>
+          </label>
+          <label>Projeção a partir de
+            <select id="projectionThreshold">
+              <option value="5">5% apurado</option>
+              <option value="10" selected>10% apurado</option>
+              <option value="20">20% apurado</option>
+            </select>
+          </label>
+          <label>Atualização automática
+            <select id="refreshInterval">
+              <option value="60000">60 segundos</option>
+              <option value="90000" selected>90 segundos</option>
+              <option value="120000">120 segundos</option>
+            </select>
+          </label>
+        </div>
+        <div class="filter-actions">
+          <button id="refreshBtn" class="btn primary" type="button"><span>↻</span> Atualizar agora</button>
+          <button id="backBtn" class="btn ghost" type="button" disabled><span>⌂</span> Voltar ao Brasil</button>
+        </div>
+      </section>
+
+      <section class="card summary-card">
+        <div class="card-title"><span class="title-icon">▥</span><h2>Resumo da apuração</h2><span id="scopeBadge" class="pill muted">Brasil</span></div>
+        <div class="stat-grid">
+          <article class="stat"><div><span>Seções totalizadas</span><strong id="statProgress">—</strong></div><div class="ring" id="progressRing"><i></i></div></article>
+          <article class="stat"><div><span>Votos válidos</span><strong id="statValid">—</strong></div><span class="stat-symbol success">✓</span></article>
+          <article class="stat"><div><span>Brancos</span><strong id="statBlank">—</strong><small id="statBlankPct"></small></div><span class="stat-symbol">▤</span></article>
+          <article class="stat"><div><span>Nulos</span><strong id="statNull">—</strong><small id="statNullPct"></small></div><span class="stat-symbol danger">×</span></article>
+        </div>
+      </section>
+
+      <section class="card results-card" id="resultsPanel">
+        <div class="card-title"><span class="title-icon">▣</span><h2 id="detailsTitle">Resultados — Presidente</h2><span id="resultCount" class="pill muted">—</span></div>
+        <div id="seatStrip" class="seat-strip hidden"></div>
+        <div class="result-head"><span>#</span><span>Candidato</span><span>Partido</span><span>% dos votos</span><span>Total de votos</span></div>
+        <div id="candidateList" class="candidate-list"><div class="empty">Carregando resultados…</div></div>
+      </section>
+
+      <section class="card projection-card" id="projectionPanel">
+        <div class="card-title"><span class="title-icon">⌁</span><h2>Probabilidades <em>— modelo estatístico</em></h2><span id="projectionBadge" class="pill model">MODELO</span></div>
+        <div id="projectionSummary" class="projection-summary"><div class="empty">A projeção será exibida quando houver dados suficientes.</div></div>
+        <div id="projectionList" class="projection-list"></div>
+        <div class="projection-rule"><span>i</span><p id="projectionFootnote">Estimativa independente. A projeção é exibida somente até 60% da apuração e não representa declaração oficial do TSE.</p></div>
+      </section>
+    </section>
+
+    <section class="map-column card" id="mapPanel">
+      <div class="map-header">
+        <div class="card-title"><span class="title-icon">◇</span><h2 id="mapTitle">Mapa do Brasil <em>— candidato mais votado por estado</em></h2></div>
+        <div class="map-tabs">
+          <button id="mapBrazilBtn" class="map-tab active" type="button">Brasil</button>
+          <button id="mapStateBtn" class="map-tab" type="button" disabled>Estado</button>
+          <button id="mapFitBtn" class="map-tab icon" type="button" aria-label="Ajustar mapa">⛶</button>
+        </div>
+      </div>
+      <div class="map-stage">
+        <div id="map" aria-label="Mapa eleitoral interativo"></div>
+        <div id="mapLegend" class="legend"><strong>Legenda</strong><div id="legendItems"><div class="empty">Aguardando dados.</div></div></div>
+        <div id="mapHint" class="map-hint">Clique em um estado para detalhar por município.</div>
+        <div id="loadingOverlay" class="loading hidden"><div class="spinner"></div><strong id="loadingText">Carregando dados…</strong><small id="loadingSubtext"></small></div>
+      </div>
+      <div class="map-footer"><span>Dados eleitorais: Tribunal Superior Eleitoral</span><span id="technicalStatus">—</span></div>
+    </section>
+  </main>
+
+  <dialog id="methodologyDialog" class="methodology-dialog">
+    <form method="dialog">
+      <header><div><span class="eyebrow">METODOLOGIA</span><h2>Como funciona a projeção</h2></div><button value="close" aria-label="Fechar">×</button></header>
+      <div class="dialog-body">
+        <p>O painel separa o <strong>resultado oficial já totalizado</strong> de uma <strong>estimativa independente</strong> do que ainda falta apurar.</p>
+        <ul>
+          <li>Presidente e Governador: chance de vitória no 1º turno, chance de 2º turno e classificação ao 2º turno.</li>
+          <li>Senador: chance de terminar dentro do número de vagas em disputa. Em 2026 são consideradas duas vagas por UF; em 2022, uma.</li>
+          <li>Deputados: não há probabilidade simplificada de “vitória”, pois a eleição é proporcional. O painel mostra votos, situação e, quando disponível no arquivo do TSE, vagas atribuídas a partido/federação.</li>
+          <li>O cálculo usa simulação de Monte Carlo, o eleitorado ainda não totalizado e o desempenho observado nas unidades geográficas já carregadas.</li>
+          <li>A projeção começa no percentual selecionado e é <strong>encerrada quando a apuração ultrapassa 60%</strong>.</li>
+        </ul>
+        <p class="dialog-note">Este painel não é produto oficial da Justiça Eleitoral. Os votos e percentuais são dados do TSE; as probabilidades são cálculos do próprio painel.</p>
+      </div>
+      <footer><button class="btn primary" value="close">Entendi</button></footer>
+    </form>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="./assets/projection.js"></script>
+  <script src="./assets/app.js"></script>
+</body>
+</html>
